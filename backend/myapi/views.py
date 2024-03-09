@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 import base64
 from pymongo import MongoClient,DESCENDING
 from datetime import datetime
+from keras.models import load_model
 
 client = MongoClient("mongodb://localhost:27017/")
 db = client['trinitt']
@@ -16,10 +17,13 @@ def upload_image(request):
         if not uploaded_file:
             return JsonResponse({'error': 'No file uploaded'}, status=400)
         image_bytes = uploaded_file.read()
+        model_path = 'trained_model.h5'
+        loaded_model = load_model(model_path)
+        img,results = loaded_model.predict_caption(image_bytes)
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
         current_datetime = datetime.now()
         inserted_id = collection.insert_one({'image_bytes': base64_image, 'datetime': current_datetime , 'caption' : "this is caption :/"}).inserted_id
-        return JsonResponse({'upload success -- inserted_id': str(inserted_id)})
+        return JsonResponse({'upload success -- inserted_id': str(inserted_id), 'predictions':results})
     else:
         return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
 
